@@ -1,0 +1,177 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// // enum String {
+// //   admin
+// //   cliente
+// //   motoboy
+// // }
+
+// // enum String {
+// //   fisica
+// //   juridica
+// // }
+
+// // enum String {
+// //   PENDENTE
+// //   ACEITA
+// //   CHEGADA_COLETA
+// //   SAIDA_COLETA
+// //   CHEGADA_ENTREGA
+// //   SAIDA_ENTREGA
+// //   FINALIZADA
+// //   CANCELADA
+// // }
+
+// // enum String {
+// //   nova_corrida
+// //   corrida_cancelada
+// //   corrida_aceita
+// //   sistema
+// //   aprovacao
+// // }
+
+model User {
+  id                Int       @id @default(autoincrement())
+  openId            String?   @unique
+  name              String?
+  email             String?
+  phone             String?
+  loginMethod       String?
+  role              String      @default("cliente")
+  
+  cpf               String?   @unique
+  cnpj              String?   @unique
+  passwordHash      String?
+  personType        String?
+  rememberMe        Boolean   @default(false)
+
+  resetToken        String?
+  resetTokenExpires DateTime?
+
+  isOnline          Boolean   @default(false)
+  isApproved        Boolean   @default(false)
+  vehiclePlate      String?
+  vehicleModel      String?
+
+  lastLat           Float?
+  lastLng           Float?
+  lastLocationAt    DateTime?
+
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  lastSignedIn      DateTime  @default(now())
+
+  clientRides       Ride[]    @relation("ClientRides")
+  motoboyRides      Ride[]    @relation("MotoboyRides")
+  updatedPricing    PricingSettings[]
+  locations         Location[]
+  notifications     Notification[]
+
+  @@map("users")
+}
+
+model PricingSettings {
+  id              Int      @id @default(autoincrement())
+  basePrice       Decimal  @default(10.00)
+  baseDistanceKm  Decimal  @default(5.00)
+  pricePerExtraKm Decimal  @default(2.00)
+  updatedBy       Int?
+  updatedByUser   User?    @relation(fields: [updatedBy], references: [id])
+  updatedAt       DateTime @default(now()) @updatedAt
+
+  @@map("pricing_settings")
+}
+
+model Ride {
+  id                  Int        @id @default(autoincrement())
+  clientId            Int
+  client              User       @relation("ClientRides", fields: [clientId], references: [id])
+  motoboyId           Int?
+  motoboy             User?      @relation("MotoboyRides", fields: [motoboyId], references: [id])
+  establishmentId     String?
+  
+  pickupAddress       String
+  pickupStreet        String?
+  pickupNumber        String?
+  pickupNeighborhood  String?
+  pickupCity          String?
+  pickupState         String?
+  pickupLat           Float
+  pickupLng           Float
+  
+  deliveryAddress     String
+  deliveryStreet      String?
+  deliveryNumber      String?
+  deliveryNeighborhood String?
+  deliveryCity        String?
+  deliveryState       String?
+  deliveryLat         Float
+  deliveryLng         Float
+  
+  distanceKm          Decimal
+  durationMinutes     Int
+  
+  price               Decimal
+  motoboyEarnings     Decimal?
+  orderNumber         String?
+  pickupCode          String?
+  expiresAt           DateTime?
+  
+  status              String @default("PENDENTE")
+  
+  notes               String?
+  cancelReason        String?
+  
+  acceptedAt          DateTime?
+  pickupArrivedAt     DateTime?
+  pickupDepartedAt    DateTime?
+  deliveryArrivedAt   DateTime?
+  deliveryDepartedAt  DateTime?
+  canceledAt          DateTime?
+  createdAt           DateTime   @default(now())
+  updatedAt           DateTime   @updatedAt
+
+  locations           Location[]
+  notifications       Notification[]
+
+  @@map("rides")
+}
+
+model Location {
+  id          Int      @id @default(autoincrement())
+  motoboyId   Int
+  motoboy     User     @relation(fields: [motoboyId], references: [id])
+  rideId      Int?
+  ride        Ride?    @relation(fields: [rideId], references: [id])
+  lat         Float
+  lng         Float
+  accuracy    Float?
+  speed       Float?
+  heading     Float?
+  createdAt   DateTime @default(now())
+
+  @@map("locations")
+}
+
+model Notification {
+  id          Int              @id @default(autoincrement())
+  userId      Int
+  user        User             @relation(fields: [userId], references: [id])
+  title       String
+  message     String
+  type        String
+  rideId      Int?
+  ride        Ride?            @relation(fields: [rideId], references: [id])
+  isRead      Boolean          @default(false)
+  expiresAt   DateTime?
+  createdAt   DateTime         @default(now())
+
+  @@map("notifications")
+}
